@@ -10,8 +10,8 @@ Training a cycleGAN using the dataset used in the StainGAN paper.
 
 import os 
 os.sys.path.insert(0, 'E:\\dev\\packages')
-from proUtils import utils
-
+# from proUtils import utils
+from datetime import datetime
 from glob import glob
 from tqdm import tqdm
 
@@ -22,6 +22,10 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 from sklearn.feature_extraction.image import extract_patches_2d
+
+
+from GANs import utils as u
+from GANs.cycleGAN import models
 
 # directory where the training slides are
 scan_aperio_dir = 'D:\\StainGAN\\mitos_atypia_2014_training_aperio\\'
@@ -96,3 +100,51 @@ for i, idx in enumerate(idxB):
     plt.axis('off')
     plt.imshow(trainHama[idx].astype('uint8'))
 plt.show()
+
+
+
+#=============================================================================#
+
+# data preprocessing 
+trainAperio = u.scale_data(trainAperio)
+trainHama = u.scale_data(trainHama)
+
+# input shape
+image_shape = trainAperio.shape[1:]
+
+# generator model
+genAperio2Hama = models.build_generator(input_shape=image_shape)
+genHama2Aperio = models.build_generator(input_shape=image_shape)
+
+# discriminator model
+disAperio = models.build_discriminator(input_shape=image_shape)
+dis_Hama = models.build_discriminator(input_shape=image_shape)
+
+# cycleGAN
+cycleGAN_Aperio2Hama = models.build_cycleGAN(genAperio2Hama, dis_Hama, genHama2Aperio, input_shape=image_shape)
+cycleGAN_Hama2Aperio = models.build_cycleGAN(genHama2Aperio, disAperio, genAperio2Hama, input_shape=image_shape)
+
+
+#Training 
+start_time = datetime.now()
+
+models.train_cycleGAN(disAperio, dis_Hama, genAperio2Hama, genHama2Aperio, 
+                      cycleGAN_Aperio2Hama, cycleGAN_Hama2Aperio, trainAperio, trainHama,
+                      epochs=50, summary_interval=10, nameA2B='GenAperio2Hama', nameB2A='GenHama2Aperio')
+
+end_time = datetime.now()
+
+# Calculate the time difference
+time_diff = end_time - start_time
+
+# Extract days, seconds, and microseconds
+days = time_diff.days
+seconds = time_diff.seconds
+microseconds = time_diff.microseconds
+
+# Convert seconds to hours, minutes, and seconds
+hours, remainder = divmod(seconds, 3600)
+minutes, seconds = divmod(remainder, 60)
+
+# Print the time taken for the training 
+print(f"Training Time: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds, {microseconds} microseconds")

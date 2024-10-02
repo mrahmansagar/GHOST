@@ -11,7 +11,6 @@ Training a cycleGAN using the dataset used in the StainGAN paper.
 import os 
 os.sys.path.insert(0, 'E:\\dev\\packages')
 # from proUtils import utils
-from datetime import datetime
 from glob import glob
 from tqdm import tqdm
 
@@ -68,7 +67,7 @@ list_of_aperio_patches = []
 for ap in tqdm(aperio_scans_path):
     img = Image.open(ap)
     img = np.array(img)
-    patches = extract_patches_2d(img, patch_size=(256, 256), max_patches=30, random_state=0)
+    patches = extract_patches_2d(img, patch_size=(256, 256), max_patches=33, random_state=41)
     list_of_aperio_patches.append(patches)
     
 trainAperio = np.concatenate(list_of_aperio_patches, axis=0)
@@ -79,7 +78,7 @@ for ha in tqdm(hama_scans_path):
     img = Image.open(ha)
     img = img.resize((1539, 1376), Image.LANCZOS)
     img = np.array(img)
-    patches = extract_patches_2d(img, patch_size=(256, 256), max_patches=30, random_state=0)
+    patches = extract_patches_2d(img, patch_size=(256, 256), max_patches=33, random_state=41)
     list_of_hama_patches.append(patches)
     
     
@@ -106,8 +105,8 @@ plt.show()
 #=============================================================================#
 
 # data preprocessing 
-trainAperio = u.scale_data(trainAperio)
-trainHama = u.scale_data(trainHama)
+trainAperio = u.scale_data(trainAperio[0:10])
+trainHama = u.scale_data(trainHama[0:10])
 
 # input shape
 image_shape = trainAperio.shape[1:]
@@ -126,25 +125,7 @@ cycleGAN_Hama2Aperio = models.build_cycleGAN(genHama2Aperio, disAperio, genAperi
 
 
 #Training 
-start_time = datetime.now()
-
 models.train_cycleGAN(disAperio, dis_Hama, genAperio2Hama, genHama2Aperio, 
                       cycleGAN_Aperio2Hama, cycleGAN_Hama2Aperio, trainAperio, trainHama,
-                      epochs=50, summary_interval=10, nameA2B='GenAperio2Hama', nameB2A='GenHama2Aperio')
+                      batch_size=1, epochs=2, summary_interval=1, nameA2B='GenAperio2Hama', nameB2A='GenHama2Aperio')
 
-end_time = datetime.now()
-
-# Calculate the time difference
-time_diff = end_time - start_time
-
-# Extract days, seconds, and microseconds
-days = time_diff.days
-seconds = time_diff.seconds
-microseconds = time_diff.microseconds
-
-# Convert seconds to hours, minutes, and seconds
-hours, remainder = divmod(seconds, 3600)
-minutes, seconds = divmod(remainder, 60)
-
-# Print the time taken for the training 
-print(f"Training Time: {days} days, {hours} hours, {minutes} minutes, {seconds} seconds, {microseconds} microseconds")

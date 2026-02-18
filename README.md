@@ -1,2 +1,2 @@
 # GHOST
-Generative Histology using Optimal Style Transfer 
+Generative Histology using Optimal Style Transfer. 

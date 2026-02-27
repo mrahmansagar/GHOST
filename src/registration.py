@@ -192,28 +192,3 @@ register_2D_image(fixed_file=ct_file, moving_file=histo_file, fixed_mask=None, m
                       number_of_levels=3, max_iter=100, checkers=200, lines=100,
                       processed_dir=None, copy_originals=True)
 
-
-
-'''
-    plt.figure(figsize=(19,19))
-    ax=plt.subplot(221)
-    ax.imshow(RI.astype('uint8'))
-    ax.set_title('deformed image')
-    ax.axis('off')
-    ax=plt.subplot(222)
-    ax.imshow(checker.astype('uint8'))
-    ax.set_title('checker board')
-    ax.axis('off')
-    ax=plt.subplot(223)
-    ax.imshow(RIL.astype('uint8'))
-    ax.set_title('deformed grid')
-    ax.axis('off')
-    ax=plt.subplot(224)
-    mp=ax.imshow(jacobian,cmap='bwr')
-    ax.set_title('Jacobian')
-    plt.colorbar(mp)
-    ax.axis('off')
-    plt.show()
-
-
-    '''

@@ -1,15 +1,17 @@
 from pathlib import Path
+import shutil
 from skimage import io
 import SimpleITK as sitk
 
 # Import our new modular functions
-from registration import compute_bspline_transform, apply_transform, preprocess_for_registration
-from reg_utils import create_checkerboard_overlay, create_deformed_grid
+from src.registration import compute_bspline_transform, apply_transform, preprocess_for_registration
+from src.reg_utils import create_checkerboard_overlay, create_deformed_grid
 
 def run_registration_pipeline(
     fixed_file: str, 
     moving_file: str, 
     processed_dir: str = "./registration_output", 
+    copy_originals: bool = False,
     create_checkers: bool = False,
     create_lines: bool = False 
 ):
@@ -44,6 +46,14 @@ def run_registration_pipeline(
     save_dir = Path(processed_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
     
+    if copy_originals:
+    # Fixed File
+        shutil.copy2(fixed_file, save_dir)
+
+        # Moving file
+        shutil.copy2(moving_file, save_dir)  
+
+
     moving_stem = Path(moving_file).stem
     reg_fname = save_dir / f"{moving_stem}_registered.tif"
     

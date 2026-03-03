@@ -4,7 +4,7 @@ import SimpleITK as sitk
 
 # Import our new modular functions
 from registration import compute_bspline_transform, apply_transform, preprocess_for_registration
-from utils import create_checkerboard_overlay, create_deformed_grid
+from reg_utils import create_checkerboard_overlay, create_deformed_grid
 
 def run_registration_pipeline(
     fixed_file: str, 
@@ -61,7 +61,3 @@ def run_registration_pipeline(
         grid_img = create_deformed_grid(fixed_sitk, moving_sitk, transform, line_spacing=200)
         io.imsave(save_dir / f"{moving_stem}_lines.png", grid_img)
 
-
-ct_file = "/home/sagar/projects/GHOST/data/raw/45_ct.tif"
-histo_file = "/home/sagar/projects/GHOST/data/raw/45_histo.tif"
-run_registration_pipeline(fixed_file=ct_file, moving_file=histo_file, processed_dir="./registration_output_new", create_checkers=True, create_lines=True)

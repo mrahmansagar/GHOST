@@ -1,12 +1,19 @@
 import numpy as np
-from skimage import io
-from pathlib import Path
 import SimpleITK as sitk
 
-def create_checkerboard_overlay(fixed_img_array: np.ndarray, registered_img_array: np.array, 
-                                block_size: int = 50) -> np.ndarray:
+def create_checkerboard_overlay(
+    fixed_img_array: np.ndarray, 
+    registered_img_array: np.array, 
+    block_size: int = 50
+) -> np.ndarray:
     """
     Creates a checkerboard pattern alternating between the fixed and registered images.
+    Args:
+        fixed_img_array: The original fixed image as a numpy array.
+        registered_img_array: The registered image as a numpy array.
+        block_size: The size of the checkerboard blocks in pixels.
+    Returns:
+        A numpy array representing the checkerboard overlay.    
     """
     checker = np.zeros((registered_img_array.shape[0], registered_img_array.shape[1], 3))
     fixed_normalized = (fixed_img_array / np.max(fixed_img_array)) * 255.0

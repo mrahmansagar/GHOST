@@ -1,12 +1,13 @@
 import SimpleITK as sitk
 import numpy as np
-from skimage import io
 from tqdm import tqdm
-from pathlib import Path
 from typing import Optional
 
 
-def preprocess_for_registration(fixed_image: np.ndarray, moving_image: np.ndarray) -> tuple[sitk.Image, sitk.Image]:
+def preprocess_for_registration(
+    fixed_image: np.ndarray, 
+    moving_image: np.ndarray
+) -> tuple[sitk.Image, sitk.Image]:
     """
     Preprocesses the input images for registration by averaging across channels (if needed) 
     and normalizing intensities.
@@ -45,9 +46,14 @@ def preprocess_for_registration(fixed_image: np.ndarray, moving_image: np.ndarra
 
 
 
-def compute_bspline_transform(fixed_image: sitk.Image, moving_image: sitk.Image, 
-                            fixed_mask: Optional[sitk.Image] = None, moving_mask: Optional[sitk.Image] = None,
-                            number_of_levels: int = 3, max_iter: int = 100) -> sitk.Transform:
+def compute_bspline_transform(
+    fixed_image: sitk.Image, 
+    moving_image: sitk.Image, 
+    fixed_mask: Optional[sitk.Image] = None, 
+    moving_mask: Optional[sitk.Image] = None,
+    number_of_levels: int = 3, 
+    max_iter: int = 100
+) -> sitk.Transform:
     """
     Computes the B-Spline elastic transformation to align a moving image to a fixed image.
     
@@ -109,7 +115,11 @@ def compute_bspline_transform(fixed_image: sitk.Image, moving_image: sitk.Image,
     
     return final_transform
 
-def apply_transform(fixed_image: sitk.Image, moving_image: sitk.Image, transform: sitk.Transform) -> sitk.Image:
+def apply_transform(
+    fixed_image: sitk.Image, 
+    moving_image: sitk.Image, 
+    transform: sitk.Transform
+) -> sitk.Image:
     """
     Applies a computed transform to a moving image and formats the output.
     

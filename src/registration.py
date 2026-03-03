@@ -1,20 +1,27 @@
-import numpy as np
 import SimpleITK as sitk
-from tqdm import tqdm
+import numpy as np
 from skimage import io
-import shutil
-from pathlib import Path, PurePath
+from tqdm import tqdm
+from pathlib import Path
+from typing import Optional
 
 
-def register_2D_image(fixed_file, moving_file, fixed_mask=None, moving_mask=None, 
-                      number_of_levels=3, max_iter=100, checkers=None, lines=None,
-                      processed_dir=None, copy_originals=True):
-
-
-    fixed_image = io.imread(fixed_file).astype('float')
-    moving_image = io.imread(moving_file).astype('float')
-
-
+def preprocess_for_registration(fixed_image: np.ndarray, moving_image: np.ndarray) -> tuple[sitk.Image, sitk.Image]:
+    """
+    Preprocesses the input images for registration by averaging across channels (if needed) 
+    and normalizing intensities.
+    
+    Args:
+        fixed_image: nd array representing a fixed image that may have multiple channels (e.g., RGB).
+        moving_image: nd array representing a moving image that may have multiple channels (e.g., RGB).
+        The arrays are expected to be in the format (C, H, W) where C is the number of channels.
+        If C=1, no averaging is performed.
+        If C>1, channels are averaged to produce a single-channel image.
+        The image values are expected to be in the range [0, 255] or [0, 1] and will be normalized to [0, 1].
+        
+    Returns:        tuple[sitk.Image, sitk.Image]: A tuple of preprocessed images ready for registration.
+    """
+    # Convert to numpy array for processing
     if np.ndim(fixed_image) == 3:
         fixed_img = np.average(fixed_image, axis=2)
     else:
@@ -30,33 +37,31 @@ def register_2D_image(fixed_file, moving_file, fixed_mask=None, moving_mask=None
     fixed_img = fixed_img/np.max(fixed_img)*50.0
     moving_img = moving_img/np.max(moving_img)*50.0
 
-    if fixed_mask == None:
-        fixed_mask = np.ones((fixed_img.shape[0], fixed_img.shape[1]))
-    else:
-        fixed_mask = fixed_mask
-
-    if moving_mask == None:
-        moving_mask = np.ones((moving_img.shape[0],moving_img.shape[1]))
-    else:
-        moving_mask = moving_mask
-    
-    # Create a progress bar
-    pbar = tqdm(total=100, desc="B-Spline Registration Progress Level ["+str(number_of_levels)+"]", position=0)
-    
-    def update_progress(registration_method):
-        """Update tqdm progress bar based on iteration"""
-        iteration = registration_method.GetOptimizerIteration()
-        metric = registration_method.GetMetricValue()
-    
-        pbar.n = iteration  # Update iteration count
-        pbar.set_postfix(metric=metric)  # Show metric value
-        pbar.update(1)  # Update the bar
-    
-    """ Perform B-Spline based elastic registration with optional masks. """
-    
     # Convert images to SimpleITK format if not already
     fixed_img = sitk.GetImageFromArray(fixed_img) if isinstance(fixed_img, np.ndarray) else fixed_img
     moving_img = sitk.GetImageFromArray(moving_img) if isinstance(moving_img, np.ndarray) else moving_img
+    
+    return fixed_img, moving_img
+
+
+
+def compute_bspline_transform(fixed_image: sitk.Image, moving_image: sitk.Image, 
+                            fixed_mask: Optional[sitk.Image] = None, moving_mask: Optional[sitk.Image] = None,
+                            number_of_levels: int = 3, max_iter: int = 100) -> sitk.Transform:
+    """
+    Computes the B-Spline elastic transformation to align a moving image to a fixed image.
+    
+    Args:
+        fixed_img: The reference SimpleITK image.
+        moving_img: The SimpleITK image to be deformed.
+        fixed_mask: Optional mask for the fixed image.
+        moving_mask: Optional mask for the moving image.
+        number_of_levels: Downsampling levels for multi-resolution registration.
+        max_iter: Maximum iterations for the LBFGSB optimizer.
+        
+    Returns:
+        sitk.Transform: The computed mathematical transformation.
+    """
     
     # Initialize registration
     registration = sitk.ImageRegistrationMethod()
@@ -75,7 +80,7 @@ def register_2D_image(fixed_file, moving_file, fixed_mask=None, moving_mask=None
     # Setup B-spline Transform (elastic registration)
     grid_spacing = [15, 15]  # Control point spacing
 
-    transform = sitk.BSplineTransformInitializer(fixed_img, grid_spacing)  # Adjust grid size as needed
+    transform = sitk.BSplineTransformInitializer(fixed_image, grid_spacing)  # Adjust grid size as needed
     
     registration.SetInitialTransform(transform, inPlace=False)
   
@@ -84,111 +89,52 @@ def register_2D_image(fixed_file, moving_file, fixed_mask=None, moving_mask=None
     registration.SetSmoothingSigmasPerLevel([2] * number_of_levels)  # Smoothing sigma for each level
 
     # Use masks if provided
-    try:
+    if fixed_mask is not None:
         registration.SetMetricFixedMask(fixed_mask)
-    except:
-        ...
-    try:
+    if moving_mask is not None:
         registration.SetMetricMovingMask(moving_mask)
-    except:
-        ...
 
-    # Attach progress observer
-    registration.AddCommand(sitk.sitkIterationEvent, lambda: update_progress(registration))
+    # Progress bar setup
+    pbar = tqdm(total=max_iter, desc=f"B-Spline Registration (Levels: {number_of_levels})", position=0)
     
-    final_transform = registration.Execute(fixed_img, moving_img)
+    def update_progress():
+        pbar.n = registration.GetOptimizerIteration()
+        pbar.set_postfix(metric=registration.GetMetricValue())
+        pbar.update(1)
 
-    fixed_img = sitk.ReadImage(fixed_file)
-    moving_img = sitk.ReadImage(moving_file)
+    registration.AddCommand(sitk.sitkIterationEvent, update_progress)
+    
+    final_transform = registration.Execute(fixed_image, moving_image)
+    pbar.close()
+    
+    return final_transform
 
+def apply_transform(fixed_image: sitk.Image, moving_image: sitk.Image, transform: sitk.Transform) -> sitk.Image:
+    """
+    Applies a computed transform to a moving image and formats the output.
+    
+    Returns:
+        np.ndarray: The aligned image as an 8-bit RGBA numpy array.
+    """
     resampler = sitk.ResampleImageFilter()
-    resampler.SetReferenceImage(fixed_img)
+    resampler.SetReferenceImage(fixed_image)
     resampler.SetInterpolator(sitk.sitkLinear)
-    resampler.SetTransform(final_transform)
-    resampled_image = resampler.Execute(moving_img)
-
-
-    RI=sitk.GetArrayFromImage(resampled_image)
-    if len(RI.shape) == 3 and RI.shape[0] == 3:  
-        RI = np.transpose(RI, (1, 2, 0))  # Convert (C, H, W) -> (H, W, C)
-    RI = RI/np.max(RI)*255
-    RI = np.concatenate((RI,np.ones((RI.shape[0],RI.shape[1],1))*255),axis=-1)
-    mask = np.all(RI[:,:,:3]==RI[0,0,:3],axis=-1)
-    RI[mask,3]=0
-    RI=RI.astype('uint8')
-
-    # Saving all the files 
-    if processed_dir == None:
-        save_dir = "./registration_output"
-    else:
-        save_dir = processed_dir
-
-    save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=True)
+    resampler.SetTransform(transform)
     
-    # Registered file
-    registered_fname = f"{save_dir}/{PurePath(moving_file).stem}_registered.tif"
-    print('Saving deformed images as ',registered_fname)
-    io.imsave(registered_fname, RI)
-
+    resampled_image = resampler.Execute(moving_image)
+    img_array = sitk.GetArrayFromImage(resampled_image)
     
-    if copy_originals:
-    # Fixed File
-        shutil.copy2(fixed_file, save_dir)
-
-        # Moving file
-        shutil.copy2(moving_file, save_dir)  
-
-    # Checker board
-    if checkers is not None:
-        checker = np.zeros((RI.shape[0],RI.shape[1],3))
-        # F = io.imread(fixed_img_file_name).astype('float')
-        F =  fixed_image
-        F = F/np.max(F)*255
-
+    # Handle channel ordering (C, H, W) -> (H, W, C)
+    if len(img_array.shape) == 3 and img_array.shape[0] == 3:  
+        img_array = np.transpose(img_array, (1, 2, 0))
         
-        block_size = checkers
-        for r in range(0, RI.shape[0], block_size):
-            for c in range(0, RI.shape[1], block_size):
-                if ((r // block_size) + (c // block_size)) % 2 == 0:
-                    checker[r:r+block_size, c:c+block_size, :] = RI[r:r+block_size, c:c+block_size, :3]
-                else:
-                    checker[r:r+block_size, c:c+block_size, :] = F[r:r+block_size, c:c+block_size, :]
-
-        checker_fname = f"{save_dir}/{PurePath(moving_file).stem}_checker.png"
-        print('Saving checkerboard as ', checker_fname)
-        io.imsave(checker_fname, checker.astype('uint8'))
-
-    # Lines
-    if lines is not None:
-        line_spacing = lines
-        for r in range(0,moving_img.GetSize()[1],line_spacing):
-            for x in range(moving_img.GetSize()[0]):
-                moving_img.SetPixel(x,r,(0,0,0))
-        for c in range(0,moving_img.GetSize()[0],line_spacing):
-            for y in range(moving_img.GetSize()[1]):
-                moving_img.SetPixel(c,y,(0,0,0))
-            
-        resampler = sitk.ResampleImageFilter()
-        resampler.SetReferenceImage(fixed_img)
-        resampler.SetInterpolator(sitk.sitkLinear)
-        resampler.SetTransform(final_transform)
-        resampled_image = resampler.Execute(moving_img)
-        
-        RIL=sitk.GetArrayFromImage(resampled_image)
-        if len(RIL.shape) == 3 and RIL.shape[0] == 3:  
-            RIL = np.transpose(RIL, (1, 2, 0))  # Convert (C, H, W) -> (H, W, C)
-        RIL = RIL/np.max(RI)*255
-        RIL=RIL.astype('uint8')
-
-        lines_fname = f"{save_dir}/{PurePath(moving_file).stem}_lines.png"
-        print('Saving image with deformed lines as', lines_fname)
-        io.imsave(lines_fname, RIL.astype('uint8'))
-
-
-ct_file = "/home/sagar/projects/GHOST/data/raw/45_ct.tif"
-histo_file = "/home/sagar/projects/GHOST/data/raw/45_histo.tif"
-register_2D_image(fixed_file=ct_file, moving_file=histo_file, fixed_mask=None, moving_mask=None, 
-                      number_of_levels=3, max_iter=100, checkers=200, lines=100,
-                      processed_dir=None, copy_originals=True)
-
+    # Normalize to 255
+    img_array = (img_array / np.max(img_array)) * 255.0
+    
+    # Add alpha channel and mask background
+    img_array = np.concatenate((img_array, np.ones((img_array.shape[0], img_array.shape[1], 1)) * 255), axis=-1)
+    mask = np.all(img_array[:, :, :3] == img_array[0, 0, :3], axis=-1)
+    img_array[mask, 3] = 0
+    
+    return img_array.astype('uint8')
+    

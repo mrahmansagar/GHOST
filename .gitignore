@@ -129,6 +129,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.conenv
+
 
 # Spyder project settings
 .spyderproject
@@ -162,7 +164,7 @@ cython_debug/
 #.idea/
 
 
-
+.vscode/
 /cycleGAN_*
 /notebooks/*
 /registration_output/*

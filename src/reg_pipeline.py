@@ -47,7 +47,7 @@ def run_registration_pipeline(
     save_dir.mkdir(parents=True, exist_ok=True)
     
     if copy_originals:
-    # Fixed File
+        # Fixed File
         shutil.copy2(fixed_file, save_dir)
 
         # Moving file

@@ -42,6 +42,7 @@ if __name__ == "__main__":
         fixed_file=args.fixed,
         moving_file=args.moving,
         processed_dir=args.output_dir,
+        copy_originals=args.copy_originals,
         create_checkers=args.create_checkers,
         create_lines=args.create_lines
     )

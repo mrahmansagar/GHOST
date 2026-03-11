@@ -15,17 +15,35 @@ def create_checkerboard_overlay(
     Returns:
         A numpy array representing the checkerboard overlay.    
     """
-    checker = np.zeros((registered_img_array.shape[0], registered_img_array.shape[1], 3))
-    fixed_normalized = (fixed_img_array / np.max(fixed_img_array)) * 255.0
+    # Ensure fixed image is 3D (H, W, C)
+    if fixed_img_array.ndim == 2:
+        # Convert grayscale to RGB by stacking
+        fixed_img_array = np.stack([fixed_img_array] * 3, axis=-1)
+    elif fixed_img_array.shape[2] > 3:
+        # If it has an alpha channel, strip it for the overlay
+        fixed_img_array = fixed_img_array[:, :, :3]
+
+    # Initialize the checkerboard with 3 channels
+    h, w = registered_img_array.shape[:2]
+    checker = np.zeros((h, w, 3), dtype='uint8')
     
-    for r in range(0, checker.shape[0], block_size):
-        for c in range(0, checker.shape[1], block_size):
+    # Normalize fixed image to 0-255
+    fixed_norm = (fixed_img_array / (np.max(fixed_img_array) + 1e-5) * 255.0).astype('uint8')
+    
+    # Take only RGB from registered (ignore Alpha)
+    reg_rgb = registered_img_array[:, :, :3]
+
+    for r in range(0, h, block_size):
+        for c in range(0, w, block_size):
+            r_end = min(r + block_size, h)
+            c_end = min(c + block_size, w)
+            
             if ((r // block_size) + (c // block_size)) % 2 == 0:
-                checker[r:r+block_size, c:c+block_size, :] = registered_img_array[r:r+block_size, c:c+block_size, :3]
+                checker[r:r_end, c:c_end, :] = reg_rgb[r:r_end, c:c_end, :]
             else:
-                checker[r:r+block_size, c:c+block_size, :] = fixed_normalized[r:r+block_size, c:c+block_size, :3]
+                checker[r:r_end, c:c_end, :] = fixed_norm[r:r_end, c:c_end, :]
                 
-    return checker.astype('uint8')
+    return checker
 
 
 def create_deformed_grid(

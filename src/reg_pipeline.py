@@ -12,8 +12,9 @@ def run_registration_pipeline(
     moving_file: str, 
     processed_dir: str = "./registration_output", 
     copy_originals: bool = False,
-    create_checkers: bool = False,
-    create_lines: bool = False 
+    max_iterations: int = 100,
+    create_checkers: int = None,
+    create_lines: int = None 
 ):
     """
     Orchestrates the loading, registration, and saving of images.
@@ -33,7 +34,7 @@ def run_registration_pipeline(
     fixed_image_sitk, moving_image_sitk = preprocess_for_registration(fixed_image, moving_image)
 
     # 3. Compute Transform
-    transform = compute_bspline_transform(fixed_image_sitk, moving_image_sitk)
+    transform = compute_bspline_transform(fixed_image_sitk, moving_image_sitk, max_iter=max_iterations)
 
     # 4. Load Original Data as SimpleITK Images for Applying Transform (to preserve metadata)
     fixed_sitk = sitk.ReadImage(fixed_file)
@@ -61,13 +62,13 @@ def run_registration_pipeline(
     print(f"Saved: {reg_fname}")
     
     # 5. Optional Visualization
-    if create_checkers:
+    if create_checkers is not None:
         fixed_array = io.imread(fixed_file).astype('float')
         checker_img = create_checkerboard_overlay(fixed_array, registered_array, block_size=150)
         io.imsave(save_dir / f"{moving_stem}_checker.png", checker_img)
 
     # 6. Optional: Create and save deformed grid (not implemented here, but can be added similarly)
-    if create_lines:
+    if create_lines is not None:
         grid_img = create_deformed_grid(fixed_sitk, moving_sitk, transform, line_spacing=200)
         io.imsave(save_dir / f"{moving_stem}_lines.png", grid_img)
 

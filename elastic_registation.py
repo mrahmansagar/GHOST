@@ -47,16 +47,29 @@ def main():
         action='store_true', 
         help="If set, copies the original input files into the output directory."
     )
+
+    # --- Optimization Arguments ---
+    parser.add_argument(
+        "--max_iter",
+        type=int,
+        default=100,
+        help="Maximum iterations for the LBFGSB optimizer during registration."
+    )
     
+    # --- Visualization Options ---
     parser.add_argument(
         "--create_checkers", 
-        action='store_true', 
+        type=int,
+        default=100,
+        metavar="BLOCK_SIZE", 
         help="If set, generates a checkerboard visualization for alignment verification."
     )
     
     parser.add_argument(
-        "--create_lines", 
-        action='store_true', 
+        "--create_lines",
+        type=int,
+        default=100,
+        metavar="LINE_SPACING", 
         help="If set, generates an image showing the deformed grid lines."
     )
     
@@ -70,6 +83,7 @@ def main():
             moving_file=args.moving,
             processed_dir=args.output_dir,
             copy_originals=args.copy_originals,
+            max_iterations=args.max_iter,
             create_checkers=args.create_checkers,
             create_lines=args.create_lines
         )

@@ -52,7 +52,7 @@ def create_pix2pix_model(
         tar_shape=target_shape,
         optimizer=dis_opt, 
         lr=dis_lr,
-        beta_1=dis_beta_1,
+        beta1=dis_beta_1,
         loss=dis_loss,
         loss_weights=dis_loss_weights,
         metrics=dis_metrics)
@@ -64,11 +64,11 @@ def create_pix2pix_model(
 
     # Initialize the Conditional GAN
     cgan = models.build_pix2pix(
-        gen=gen,
-        dis=dis,
+        generator=gen,
+        discriminator=dis,
         opt=cgan_opt,
         lr=cgan_lr,
-        beta_1=cgan_beta_1,
+        beta1=cgan_beta_1,
         loss=cgan_loss,
         loss_weights=cgan_loss_weights)
      

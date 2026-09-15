@@ -1,4 +1,7 @@
 import argparse
+import keras
+from keras.optimizers import Adam
+
 from tfgans.pix2pix import models
 from src.models import create_pix2pix_model
 from src.dataloader import load_data, scale_paired_data
@@ -45,8 +48,8 @@ def parse_args():
 
     # Model hyperparameters
     parser.add_argument("--dis_optimizer", 
-                        type=str, 
-                        default="Adam", 
+                        type=keras.optimizers.Optimizer, 
+                        default=Adam, 
                         help="Optimizer for the Discriminator")
 
     parser.add_argument("--dis_lr", 
@@ -81,8 +84,8 @@ def parse_args():
                         help="Number of output channels for the Generator")
 
     parser.add_argument("--cgan_optimizer", 
-                        type=str, 
-                        default="Adam", 
+                        type=keras.optimizers.Optimizer, 
+                        default=Adam,  
                         help="Optimizer for the CGAN")
 
     parser.add_argument("--cgan_lr", 
@@ -160,9 +163,9 @@ def main():
     print(f"[*] Prepared Shapes -> Source: {src_shape} | Target: {tar_shape}")
 
     # 3. Build model architecture
-    gen, dis, cgan = create_pix2pix_model(
-        src_shape=src_shape,
-        tar_shape=tar_shape,
+    dis, gen, cgan = create_pix2pix_model(
+        source_shape=src_shape,
+        target_shape=tar_shape,
         dis_opt = args.dis_optimizer,
         dis_lr=args.dis_lr,
         dis_beta_1=args.dis_beta1,

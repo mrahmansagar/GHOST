@@ -3,7 +3,7 @@ import shutil
 from skimage import io
 import SimpleITK as sitk
 
-# Import our new modular functions
+
 from src.registration import compute_bspline_transform, apply_transform, preprocess_for_registration
 from src.reg_utils import create_checkerboard_overlay, create_deformed_grid
 

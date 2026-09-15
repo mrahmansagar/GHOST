@@ -163,9 +163,13 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+#pyenv 
+.python-version
+
 
 .vscode/
 /cycleGAN_*
 /notebooks/*
 /registration_output/*
 /data/*
+/miscellaneous/*

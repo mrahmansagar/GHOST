@@ -32,12 +32,12 @@ def parse_args():
     parser.add_argument("--img_height", 
                         type=int, 
                         default=None, 
-                        help="Target image height")
+                        help="Image height")
     
     parser.add_argument("--img_width", 
                         type=int, 
                         default=None, 
-                        help="Target image width")
+                        help="Image width")
     
     parser.add_argument("--color_mode", 
                         type=str, 
